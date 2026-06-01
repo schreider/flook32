@@ -2232,18 +2232,6 @@
                             ID устройства: <strong>${deviceId}</strong><br>
                             Версия прошивки: <strong>v${fwVersion}</strong>`;
                 
-                try {
-                    const update = await apiGet('/api/check-update');
-                    
-                    if (update.updateAvailable) {
-                        html += `<br><span style="color:#fdcb6e">⚠️ Доступно обновление до v${update.latestVersion}</span>`;
-                    } else if (update.latestVersion === update.currentVersion) {
-                        html += `<br><span style="color:#00b894">✅ Установлена последняя версия</span>`;
-                    }
-                } catch(e) {
-                    html += `<br><span style="color:#a0a0b0">Статус обновления: не проверен</span>`;
-                }
-                
                 el.innerHTML = html;
             } catch(e) {
                 console.error('loadFirmwareVersion:', e);
@@ -2368,26 +2356,6 @@
             }));
             
             setTimeout(initTooltips, 500);
-            
-            // Загружаем текущую версию для OTA при открытии настроек
-            const origShowScreen = showScreen;
-            showScreen = function(id) {
-                origShowScreen(id);
-                if (id === 'config') {
-                    setTimeout(() => {
-                        const otaSection = document.getElementById('section-ota');
-                        if (otaSection && !otaSection.querySelector('.section-content.collapsed')) {
-                            fetch('/api/check-update')
-                                .then(r => r.json())
-                                .then(d => {
-                                    const el = document.getElementById('current-version');
-                                    if (el) el.textContent = d.currentVersion || 'неизвестно';
-                                })
-                                .catch(() => {});
-                        }
-                    }, 1000);
-                }
-            };
             
             console.log('🚀 FLOOK32 WebUI v0.1.0b загружен');
         });
