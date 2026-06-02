@@ -11182,48 +11182,48 @@ void setup() {
     // ========== API МАРШРУТЫ ==========
 
     // ========== GET /api/system-info - СИСТЕМНАЯ ИНФОРМАЦИЯ ==========
-server.on("/api/system-info", HTTP_GET, [](AsyncWebServerRequest *request) {
-    float chipTemp = temperatureRead();
-    
-    char json[1024];
-    snprintf(json, sizeof(json),
-        "{"
-        "\"chipTemp\":%.1f,"
-        "\"cpuFreq\":%u,"
-        "\"freeHeap\":%u,"
-        "\"minFreeHeap\":%u,"
-        "\"maxAllocHeap\":%u,"
-        "\"heapSize\":%u,"
-        "\"sketchSize\":%u,"
-        "\"freeSketchSpace\":%u,"
-        "\"flashSize\":%u,"
-        "\"uptime\":%lu,"
-        "\"wifiRSSI\":%d,"
-        "\"chipModel\":\"%s\","
-        "\"chipRevision\":%u,"
-        "\"chipCores\":%u,"
-        "\"sdkVersion\":\"%s\","
-        "\"tasks\":%u"
-        "}",
-        chipTemp,
-        ESP.getCpuFreqMHz(),
-        ESP.getFreeHeap(),
-        ESP.getMinFreeHeap(),
-        ESP.getMaxAllocHeap(),
-        ESP.getHeapSize(),
-        ESP.getSketchSize(),
-        ESP.getFreeSketchSpace(),
-        ESP.getFlashChipSize(),
-        millis() / 1000,
-        WiFi.RSSI(),
-        ESP.getChipModel(),
-        ESP.getChipRevision(),
-        ESP.getChipCores(),
-        ESP.getSdkVersion(),
-        uxTaskGetNumberOfTasks()
-    );
-    request->send(200, "application/json", json);
-});
+    server.on("/api/system-info", HTTP_GET, [](AsyncWebServerRequest *request) {
+        float chipTemp = temperatureRead();
+        
+        char json[1024];
+        snprintf(json, sizeof(json),
+            "{"
+            "\"chipTemp\":%.1f,"
+            "\"cpuFreq\":%u,"
+            "\"freeHeap\":%u,"
+            "\"minFreeHeap\":%u,"
+            "\"maxAllocHeap\":%u,"
+            "\"heapSize\":%u,"
+            "\"sketchSize\":%u,"
+            "\"freeSketchSpace\":%u,"
+            "\"flashSize\":%u,"
+            "\"uptime\":%lu,"
+            "\"wifiRSSI\":%d,"
+            "\"chipModel\":\"%s\","
+            "\"chipRevision\":%u,"
+            "\"chipCores\":%u,"
+            "\"sdkVersion\":\"%s\","
+            "\"tasks\":%u"
+            "}",
+            chipTemp,
+            ESP.getCpuFreqMHz(),
+            ESP.getFreeHeap(),
+            ESP.getMinFreeHeap(),
+            ESP.getMaxAllocHeap(),
+            ESP.getHeapSize(),
+            ESP.getSketchSize(),
+            ESP.getFreeSketchSpace(),
+            ESP.getFlashChipSize(),
+            millis() / 1000,
+            WiFi.RSSI(),
+            ESP.getChipModel(),
+            ESP.getChipRevision(),
+            ESP.getChipCores(),
+            ESP.getSdkVersion(),
+            uxTaskGetNumberOfTasks()
+        );
+        request->send(200, "application/json", json);
+    });
 
     // ========== GET /api/nvs-health - СТАТИСТИКА СВОБОДНОЙ ПАМЯТИ NVS ==========
     // Показывает, сколько записей занято и сколько ещё доступно
