@@ -222,6 +222,6 @@ Copyright (C) 2026 t.me/schreid
 - **ArduinoJson** — [MIT License](https://github.com/bblanchon/ArduinoJson/blob/6.x/LICENSE.md) (c) Benoit Blanchon
 - **Adafruit_NeoPixel** — [LGPLv3 License](https://github.com/adafruit/Adafruit_NeoPixel/blob/master/COPYING) (c) Adafruit Industries
 - **AsyncTCP** & **ESPAsyncWebServer** — [LGPLv3 License](https://github.com/me-no-dev/AsyncTCP/blob/master/LICENSE) (c) dvarrel, me-no-dev
-- **DallasTemperature** & **OneWire** — [LGPLv2.1 or later](https://github.com/milesburton/Arduino-Temperature-Control-Library/blob/master/LICENSE) (c) Miles Burton, Tim Eckel, Guillermo Lovato
+- **DallasTemperature** & **OneWire** — [MIT License](https://github.com/milesburton/Arduino-Temperature-Control-Library/blob/master/LICENSE) (c) Miles Burton, Tim Eckel, Guillermo Lovato
 - **Chart.js** & **date-fns** — [MIT License](https://github.com/chartjs/Chart.js/blob/master/LICENSE.md) (c) Chart.js Contributors, Sasha Koss, Lesha Koss
 
