@@ -317,7 +317,7 @@ CORS: разрешены все источники
 
 Сжатие: gzip для index.html (из PROGMEM)
 
-Кэширование: ETag "v1", Cache-Control: max-age=3600
+Кэширование: ETag "v1", Cache-Control: max-age=86400
 
 ---
 
