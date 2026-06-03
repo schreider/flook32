@@ -219,7 +219,7 @@ Copyright (C) 2026 t.me/schreid
 Проект FLOOK32 использует следующие сторонние компоненты. Я выражаю благодарность их авторам.
 
 - **ESP-IDF** — [Apache License 2.0](https://github.com/espressif/esp-idf/blob/master/LICENSE) (c) Espressif Systems
-- **ArduinoJson** — [MIT License](https://github.com/bblanchon/ArduinoJson/blob/6.x/LICENSE.md) (c) Benoit Blanchon
+- **ArduinoJson** — [MIT License](https://github.com/bblanchon/ArduinoJson/blob/master/LICENSE.md) (c) Benoit Blanchon
 - **Adafruit_NeoPixel** — [LGPLv3 License](https://github.com/adafruit/Adafruit_NeoPixel/blob/master/COPYING) (c) Adafruit Industries
 - **AsyncTCP** & **ESPAsyncWebServer** — [LGPLv3 License](https://github.com/me-no-dev/AsyncTCP/blob/master/LICENSE) (c) dvarrel, me-no-dev
 - **DallasTemperature** & **OneWire** — [MIT License](https://github.com/milesburton/Arduino-Temperature-Control-Library/blob/master/LICENSE) (c) Miles Burton, Tim Eckel, Guillermo Lovato
