@@ -29,6 +29,7 @@
 | [Возможности](#возможности) | Прошивка, железо, печатные детали |
 | [Поддержать автора](#-поддержать-автора) | Донаты на развитие проекта |
 | [Лицензия](#лицензия) | GPLv3 License |
+| [Атрибуция](#-атрибуция-сторонних-библиотек) | Используемые сторонние библиотеки |
 
 ### 📖 Документация
 
@@ -213,10 +214,14 @@ Copyright (C) 2026 t.me/schreid
 
 ---
 
-## 📜 Лицензии сторонних библиотек
+## 📜 Атрибуция сторонних библиотек
 
-Прошивка содержит библиотеки, вшитые в бинарный файл:
+Проект FLOOK32 использует следующие сторонние компоненты. Я выражаю благодарность их авторам.
 
-- **Chart.js** — MIT License (Copyright (c) 2014-2024 Chart.js Contributors)
-- **date-fns** — MIT License (Copyright (c) 2021 Sasha Koss and Lesha Koss)
-- **ESP-IDF** — Apache 2.0 (Copyright (c) Espressif Systems)
+- **ESP-IDF** — [Apache License 2.0](https://github.com/espressif/esp-idf/blob/master/LICENSE) (c) Espressif Systems
+- **ArduinoJson** — [MIT License](https://github.com/bblanchon/ArduinoJson/blob/6.x/LICENSE.md) (c) Benoit Blanchon
+- **Adafruit_NeoPixel** — [LGPLv3 License](https://github.com/adafruit/Adafruit_NeoPixel/blob/master/COPYING) (c) Adafruit Industries
+- **AsyncTCP** & **ESPAsyncWebServer** — [LGPLv3 License](https://github.com/me-no-dev/AsyncTCP/blob/master/LICENSE) (c) dvarrel, me-no-dev
+- **DallasTemperature** & **OneWire** — [LGPLv2.1 or later](https://github.com/milesburton/Arduino-Temperature-Control-Library/blob/master/LICENSE) (c) Miles Burton, Tim Eckel, Guillermo Lovato
+- **Chart.js** & **date-fns** — [MIT License](https://github.com/chartjs/Chart.js/blob/master/LICENSE.md) (c) Chart.js Contributors, Sasha Koss, Lesha Koss
+
