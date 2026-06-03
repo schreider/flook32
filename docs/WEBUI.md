@@ -1,5 +1,5 @@
 [🔙 На главную](../README.md)
-
+![Веб](images/webui_dashboard.png)
 # Веб-интерфейс FLOOK32 — Полная документация
 
 **Файл:** `firmware/flook32/src/index.html`  
