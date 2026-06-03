@@ -1,4 +1,4 @@
-![Веб](images/webui.png)
+  ![Веб-интерфейс FLOOK32](images/webui.png)
 
 [🔙 На главную](../README.md)
 
