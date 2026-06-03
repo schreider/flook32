@@ -2,7 +2,7 @@
 
 # Веб-интерфейс FLOOK32 — Полная документация
 
-![Веб](images/webui_dashboard.png)
+![Веб](images/webui.png)
 
 **Файл:** `firmware/flook32/src/index.html`  
 **Тип:** Одностраничное приложение (SPA)  
