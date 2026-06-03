@@ -1,8 +1,8 @@
+![Веб](images/webui.png)
+
 [🔙 На главную](../README.md)
 
 # Веб-интерфейс FLOOK32 — Полная документация
-
-![Веб](images/webui.png)
 
 **Файл:** `firmware/flook32/src/index.html`  
 **Тип:** Одностраничное приложение (SPA)  
