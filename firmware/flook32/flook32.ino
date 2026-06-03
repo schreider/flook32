@@ -11156,7 +11156,7 @@ void setup() {
                 return len;
             });
         response->addHeader("Content-Encoding", "gzip");
-        response->addHeader("Cache-Control", "max-age=3600, immutable, public");
+        response->addHeader("Cache-Control", "max-age=86400, immutable, public");
         response->addHeader("ETag", "\"v1\"");
         response->addHeader("Connection", "close");
         request->send(response);
