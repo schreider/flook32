@@ -3,9 +3,12 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0_beta-orange" alt="version">
-  <img src="https://img.shields.io/badge/platform-ESP32-green" alt="platform">
-  <img src="https://img.shields.io/badge/license-GPLv3-blue" alt="license">
+  <a href="https://github.com/schreider/flook32/releases"><img src="https://img.shields.io/badge/version-0.1.0_beta-orange" alt="version"></a>
+  <a href="https://www.espressif.com/en/products/socs/esp32"><img src="https://img.shields.io/badge/platform-ESP32-green" alt="platform"></a>
+  <a href="https://github.com/schreider/flook32/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue" alt="license"></a>
+  <a href="https://github.com/schreider/flook32/stargazers"><img src="https://img.shields.io/github/stars/schreider/flook32" alt="GitHub stars"></a>
+  <a href="https://github.com/schreider/flook32/issues"><img src="https://img.shields.io/github/issues/schreider/flook32" alt="GitHub issues"></a>
+  <a href="https://t.me/flook32"><img src="https://img.shields.io/badge/Telegram-Channel-blue.svg" alt="Telegram"></a>
 </p>
 
 # FLOOK32 — контроллер нагрева камеры 3D-принтера
