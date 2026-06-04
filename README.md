@@ -3,13 +3,25 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/FLOOK32-v0.1.0_beta-2a2e3b?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDEg5IDEgMTkgMTIgMjIgMjMgMTkgMjMgOSAxMiAyIi8+PC9zdmc+" alt="FLOOK32">
+  <a href="https://github.com/schreider/flook32/releases">
+    <img src="https://img.shields.io/badge/FLOOK32-v0.1.0_beta-2a2e3b?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDEg5IDEgMTkgMTIgMjIgMjMgMTkgMjMgOSAxMiAyIi8+PC9zdmc+" alt="FLOOK32">
+  </a>
   <br>
-  <img src="https://img.shields.io/badge/ESP32-blue?style=flat-square&logo=espressif&logoColor=white" alt="ESP32">
-  <img src="https://img.shields.io/badge/license-GPLv3-lightgrey?style=flat-square" alt="License">
-  <img src="https://img.shields.io/github/stars/schreider/flook32?style=flat-square&logo=github" alt="Stars">
-  <img src="https://img.shields.io/github/issues/schreider/flook32?style=flat-square&logo=github" alt="Issues">
-  <img src="https://img.shields.io/badge/Telegram-blue?style=flat-square&logo=telegram" alt="Telegram">
+  <a href="https://www.espressif.com/en/products/socs/esp32">
+    <img src="https://img.shields.io/badge/ESP32-blue?style=flat-square&logo=espressif&logoColor=white" alt="ESP32">
+  </a>
+  <a href="https://github.com/schreider/flook32/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-GPLv3-lightgrey?style=flat-square" alt="License">
+  </a>
+  <a href="https://github.com/schreider/flook32/stargazers">
+    <img src="https://img.shields.io/github/stars/schreider/flook32?style=flat-square&logo=github" alt="Stars">
+  </a>
+  <a href="https://github.com/schreider/flook32/issues">
+    <img src="https://img.shields.io/github/issues/schreider/flook32?style=flat-square&logo=github" alt="Issues">
+  </a>
+  <a href="https://t.me/flook32">
+    <img src="https://img.shields.io/badge/Telegram-blue?style=flat-square&logo=telegram" alt="Telegram">
+  </a>
 </p>
 
 # FLOOK32 — контроллер нагрева камеры 3D-принтера
