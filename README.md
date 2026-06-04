@@ -3,17 +3,6 @@
 </p>
 
 <p align="center">
-  <pre>
-  ███████╗██╗      ██████╗  ██████╗ ██╗  ██╗██████╗ ██████╗ 
-  ██╔════╝██║     ██╔═══██╗██╔══██╗██║ ██╔╝╚════██╗╚════██╗
-  █████╗  ██║     ██║   ██║██║  ██║█████╔╝  █████╔╝ █████╔╝
-  ██╔══╝  ██║     ██║   ██║██║  ██║██╔═██╗  ╚═══██╗██╔═══╝ 
-  ██║     ███████╗╚██████╔╝██████╔╝██║  ██╗██████╔╝███████╗
-  ╚═╝     ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚══════╝
-  </pre>
-</p>
-
-<p align="center">
   <a href="https://github.com/schreider/flook32/releases">
     <img src="https://img.shields.io/badge/FLOOK32-v0.1.0_beta-2a2e3b?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDEg5IDEgMTkgMTIgMjIgMjMgMTkgMjMgOSAxMiAyIi8+PC9zdmc+" alt="FLOOK32">
   <a href="https://github.com/schreider/flook32/stargazers">
