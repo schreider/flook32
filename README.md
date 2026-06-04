@@ -207,7 +207,12 @@ FLOOK32 не навязывает единственно верное повед
 
 Я продаю готовые комплекты FLOOK32 — прошитые и проверенные. Вам останется только подключить по схеме и настроить Wi-Fi. Это лучший способ поддержки ❤️
 
-Для заказа пишите в Telegram: [t.me/schreid](https://t.me/schreid)
+Для заказа:
+<p align="center">
+  <a href="https://t.me/schreid">
+    <img src="https://img.shields.io/badge/📦_ЗАКАЗАТЬ_ГОТОВЫЙ_КОМПЛЕКТ-Написать_в_Telegram-blue?style=for-the-badge&logo=telegram" alt="Заказать">
+  </a>
+</p>
 
 ---
 
