@@ -2,7 +2,11 @@
 
 # 🔥 Прошивка FLOOK32
 
-**Файл:** `flook32.ino`
+**Файл:** `firmware/flook32/src/flook32.ino`  
+**Платформа:** ESP32 (и совместимые модули)  
+**Среда разработки:** Arduino IDE  
+**Размер:** ~10000 строк (C++)  
+**Зависимости:** ArduinoJson, AsyncTCP, ESPAsyncWebServer, DallasTemperature, OneWire, Adafruit_NeoPixel
 
 Подробное техническое описание прошивки ESP32 для контроллера нагрева камеры.
 
