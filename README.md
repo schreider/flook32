@@ -5,9 +5,6 @@
 <p align="center">
   <a href="https://github.com/schreider/flook32/releases">
     <img src="https://img.shields.io/badge/FLOOK32-v0.1.0_beta-2a2e3b?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+PHBvbHlnb24gcG9pbnRzPSIxMiAyIDEg5IDEgMTkgMTIgMjIgMjMgMTkgMjMgOSAxMiAyIi8+PC9zdmc+" alt="FLOOK32">
-  <a href="https://github.com/schreider/flook32/stargazers">
-    <img src="https://custom-icon-badges.demolab.com/github/stars/schreider/flook32?logo=star&logoColor=gold&style=for-the-badge&color=gold&labelColor=2a2e3b" alt="Stars">
-  </a>
   </a>
   <br>
   <a href="https://www.espressif.com/en/products/socs/esp32">
@@ -21,6 +18,10 @@
   </a>
   <a href="https://t.me/flook32">
     <img src="https://img.shields.io/badge/Telegram-blue?style=flat-square&logo=telegram" alt="Telegram">
+  <br>
+  </a>
+  <a href="https://github.com/schreider/flook32/stargazers">
+    <img src="https://custom-icon-badges.demolab.com/github/stars/schreider/flook32?logo=star&logoColor=gold&style=for-the-badge&color=gold&labelColor=2a2e3b" alt="Stars">
   </a>
 </p>
 
