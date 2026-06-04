@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="docs/flook32.png" width="256" height="256" alt="FLOOK32 logo">
+</p>
+
+<p align="center">
   <pre>
   ███████╗██╗      ██████╗  ██████╗ ██╗  ██╗██████╗ ██████╗ 
   ██╔════╝██║     ██╔═══██╗██╔══██╗██║ ██╔╝╚════██╗╚════██╗
@@ -7,10 +11,6 @@
   ██║     ███████╗╚██████╔╝██████╔╝██║  ██╗██████╔╝███████╗
   ╚═╝     ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚══════╝
   </pre>
-</p>
-
-<p align="center">
-  <img src="docs/flook32.png" width="256" height="256" alt="FLOOK32 logo">
 </p>
 
 <p align="center">
