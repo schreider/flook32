@@ -36,6 +36,14 @@
 
 ---
 
+<p align="center">
+  <a href="docs/BUILD.md"><img src="https://img.shields.io/badge/🛠️_СБОРКА-инструкция-2a2e3b?style=for-the-badge" alt="Сборка"></a>
+  <a href="docs/SETUP.md"><img src="https://img.shields.io/badge/📥_ПРОШИВКА-первый_запуск-2a2e3b?style=for-the-badge" alt="Прошивка"></a>
+  <a href="docs/WIRING.md"><img src="https://img.shields.io/badge/🔌_ПОДКЛЮЧЕНИЕ-схема-2a2e3b?style=for-the-badge" alt="Подключение"></a>
+  <a href="docs/KLIPPER.md"><img src="https://img.shields.io/badge/🖨️_KLIPPER-интеграция-2a2e3b?style=for-the-badge" alt="Klipper"></a>
+  <a href="docs/FAQ.md"><img src="https://img.shields.io/badge/❓_FAQ-частые_вопросы-2a2e3b?style=for-the-badge" alt="FAQ"></a>
+</p>
+
 ## 📋 Быстрая навигация
 
 | Раздел | Описание |
