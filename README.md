@@ -13,15 +13,9 @@
   <a href="https://github.com/schreider/flook32/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-GPLv3-lightgrey?style=flat-square" alt="License">
   </a>
-  <a href="https://github.com/schreider/flook32/issues">
-    <img src="https://img.shields.io/github/issues/schreider/flook32?style=flat-square&logo=github" alt="Issues">
-  </a>
   <a href="https://t.me/flook32">
     <img src="https://img.shields.io/badge/Telegram-blue?style=flat-square&logo=telegram" alt="Telegram">
   <br>
-  </a>
-  <a href="https://github.com/schreider/flook32/stargazers">
-    <img src="https://custom-icon-badges.demolab.com/github/stars/schreider/flook32?logo=star&logoColor=gold&style=for-the-badge&color=gold&labelColor=2a2e3b" alt="Stars">
   </a>
 </p>
 
