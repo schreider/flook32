@@ -72,7 +72,7 @@
 | [`firmware/flook32/`](firmware/flook32/) | Прошивка ESP32 |
 | [`firmware/esp01s/`](firmware/esp01s_watchdog/) | Прошивка ESP-01S (watchdog) |
 | [`klipper/`](klipper/) | Плагин для Klipper |
-| [`hardware/enclosure/`](hardware/enclosure/) | STL, STEP, F3D файлы корпусов |
+| [`hardware/enclosure/`](hardware/enclosure/) | 3MF, STEP, F3D файлы корпусов |
 | [`tools/`](tools/) | Вспомогательные скрипты |
 | [`docs/`](docs/) | Документация |
 
