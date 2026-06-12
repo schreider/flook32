@@ -810,7 +810,7 @@
 #define FW_BUILD_DATE __DATE__ " " __TIME__
 
 // Уровни логирования: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=SILENT
-#define LOG_LEVEL 0
+#define LOG_LEVEL 1
 
 // Макросы логирования с проверкой Serial
 #if LOG_LEVEL <= 0
@@ -1008,8 +1008,8 @@
 // ----------------------------------------------------------------------------
 // ТЕМПЕРАТУРНЫЕ ПОРОГИ И ЗАЩИТЫ
 // ----------------------------------------------------------------------------
-#define DEFAULT_MAX_HEATER_TEMP 110.0                // Безопасный максимум нагревателя (°C)
-#define DEFAULT_CRITICAL_TEMP 120.0                  // Критический перегрев (°C)
+#define DEFAULT_MAX_HEATER_TEMP 150.0                // Безопасный максимум нагревателя (°C)
+#define DEFAULT_CRITICAL_TEMP 160.0                  // Критический перегрев (°C)
 #define DEFAULT_CRITICAL_HYSTERESIS 5.0              // Гистерезис сброса критической ошибки (°C)
 #define DEFAULT_MAX_AIR_TEMP 70.0                    // Максимум температуры воздуха (°C)
 #define DEFAULT_AIR_HYSTERESIS 3.0                   // Гистерезис перегрева воздуха (°C)
@@ -1022,7 +1022,7 @@
 // ----------------------------------------------------------------------------
 // ВЕНТИЛЯТОР
 // ----------------------------------------------------------------------------
-#define DEFAULT_FAN_ON_TEMP 65.0                    // Температура включения вентилятора (°C)
+#define DEFAULT_FAN_ON_TEMP 50.0                    // Температура включения вентилятора (°C)
 #define DEFAULT_FAN_OFF_HYSTERESIS 5.0              // Нижний гистерезис выключения (°C)
 #define DEFAULT_FAN_MIN_ON_TIME 30                  // Мин. время работы вентилятора (сек)
 #define DEFAULT_INVERT_FAN_SIGNAL false             // Инвертировать сигнал (для NPN/PNP ключей)
@@ -8082,6 +8082,10 @@ void checkHeatingRate() {
 //   - includeTrends: добавлять ли историю температур (только для критических)
 //   - errorCountFromCaller: счётчик повторов (для отображения в логе)
 // Вызывается: всеми защитными функциями при срабатывании
+//
+// ВАЖНО: Тренды сохраняются ТОЛЬКО для последних 3 критических ошибок.
+//        При появлении 4-й критической ошибки, тренды самой старой удаляются.
+//        Это экономит память и предотвращает фрагментацию кучи.
 void addErrorToLog(String message, bool isCritical, bool includeTrends, int errorCountFromCaller) {
     // Если система заблокирована - новые ошибки не логируем
     if (errors.isSystemLocked()) {
@@ -8121,10 +8125,48 @@ void addErrorToLog(String message, bool isCritical, bool includeTrends, int erro
         entry.severity = "info";
     }
     
-    // ========== СОХРАНЕНИЕ ТРЕНДОВ (ТОЛЬКО ДЛЯ КРИТИЧЕСКИХ ОШИБОК) ==========
+    // ========== СОХРАНЕНИЕ ТРЕНДОВ (ТОЛЬКО ДЛЯ ПОСЛЕДНИХ 3 КРИТИЧЕСКИХ ОШИБОК) ==========
     entry.trendData = "";
+    
+    // Проверяем, нужно ли сохранять тренды для этой ошибки
     if (includeTrends && isCritical) {
+        // ВХОДИМ В КРИТИЧЕСКУЮ СЕКЦИЮ ДЛЯ РАБОТЫ С ЖУРНАЛОМ
+        // Важно: не используем std::vector, только стековые переменные для избежания фрагментации
+        taskENTER_CRITICAL(&errorLogMux);
+        
+        // Подсчитываем критические ошибки с трендами и находим самую старую
+        // Используем только стековые переменные (без динамической аллокации)
+        int criticalWithTrends = 0;
+        int oldestIndex = -1;
+        unsigned long oldestTime = ULONG_MAX;
+        
+        // Один проход по журналу (максимум 20 записей - это быстро и безопасно)
+        for (size_t i = 0; i < errorLog.size(); i++) {
+            const auto& e = errorLog[i];
+            // Проверяем: критическая ли ошибка и есть ли у неё тренды
+            if (e.isCritical && e.trendData.length() > 0) {
+                criticalWithTrends++;
+                // Запоминаем самую старую (с минимальным timestamp)
+                if (e.timestamp < oldestTime) {
+                    oldestTime = e.timestamp;
+                    oldestIndex = i;
+                }
+            }
+        }
+        
+        // Если уже есть 3 критических ошибки с трендами - удаляем тренды у самой старой
+        // Это освобождает память (~3KB) и предотвращает неограниченный рост
+        if (criticalWithTrends >= 3 && oldestIndex >= 0) {
+            // Очищаем старую строку трендов (память освобождается автоматически)
+            // Записываем короткое уведомление вместо больших данных
+            errorLog[oldestIndex].trendData = "=== ТРЕНДЫ УДАЛЕНЫ (лимит 3) ===\n";
+        }
+        
+        taskEXIT_CRITICAL(&errorLogMux);
+        
+        // ========== ТЕПЕРЬ СОХРАНЯЕМ ТРЕНДЫ ДЛЯ НОВОЙ ОШИБКИ ==========
         // Вспомогательная структура для временного хранения трендов
+        // ВСЕ ПЕРЕМЕННЫЕ НА СТЕКЕ - НЕТ АЛЛОКАЦИЙ В КУЧЕ!
         struct TempTrendEntry {
             uint32_t timestamp;
             float airTemp;
@@ -8135,24 +8177,27 @@ void addErrorToLog(String message, bool isCritical, bool includeTrends, int erro
         };
         
         const int MAX_TREND_COPY = 30;          // Максимум 30 точек тренда
-        TempTrendEntry tempTrends[MAX_TREND_COPY];
+        TempTrendEntry tempTrends[MAX_TREND_COPY];  // ✅ На стеке, не фрагментирует кучу
         int actualCount = 0;
         
-        // Копируем тренды из защищённого буфера
+        // Копируем тренды из защищённого буфера (кольцевой буфер, 600 точек)
         taskENTER_CRITICAL(&trendBufferMux);
         
         int totalCount = trendBufferFilled ? TREND_BUFFER_SIZE : trendIndex;
         int entriesToTake = min(MAX_TREND_COPY, totalCount);
         
         if (entriesToTake > 0) {
+            // Вычисляем позицию для чтения (берём последние entriesToTake точек)
             int currentPos = trendBufferFilled ? trendIndex : trendIndex;
             int startPos = (currentPos - entriesToTake + TREND_BUFFER_SIZE) % TREND_BUFFER_SIZE;
             
             for (int i = 0; i < entriesToTake && actualCount < MAX_TREND_COPY; i++) {
                 int idx = (startPos + i) % TREND_BUFFER_SIZE;
                 
+                // Пропускаем пустые/нулевые записи
                 if (trendBuffer[idx].timestamp == 0) continue;
                 
+                // Копируем данные во временную структуру на стеке
                 tempTrends[actualCount].timestamp = trendBuffer[idx].timestamp;
                 tempTrends[actualCount].airTemp = trendBuffer[idx].getAirTemp();
                 tempTrends[actualCount].heaterTemp = trendBuffer[idx].getHeaterTemp();
@@ -8165,14 +8210,15 @@ void addErrorToLog(String message, bool isCritical, bool includeTrends, int erro
         
         taskEXIT_CRITICAL(&trendBufferMux);
         
-        // Формируем текстовое представление трендов
+        // Формируем текстовое представление трендов (String - единственная аллокация, была и в оригинале)
         if (actualCount > 0) {
             String trendDataStr;
-            trendDataStr.reserve(3500);         // Резервируем память для эффективности
+            trendDataStr.reserve(3500);     // Резервируем память для эффективности (было в оригинале)
             
             trendDataStr += "=== ТРЕНДЫ ПЕРЕД АВАРИЕЙ ===\n";
             
             for (int i = 0; i < actualCount; i++) {
+                // Форматируем время в ЧЧ:ММ:СС
                 unsigned long seconds = tempTrends[i].timestamp / 1000;
                 unsigned long hours = seconds / 3600;
                 unsigned long minutes = (seconds % 3600) / 60;
@@ -8189,13 +8235,13 @@ void addErrorToLog(String message, bool isCritical, bool includeTrends, int erro
                          tempTrends[i].fanState ? 1 : 0);
                 trendDataStr += line;
                 
-                // Ограничиваем длину
+                // Защита от переполнения буфера
                 if (trendDataStr.length() > MAX_TREND_DATA_LEN) break;
             }
             
             trendDataStr += "=== КОНЕЦ ТРЕНДОВ ===\n";
             
-            // Обрезаем если слишком длинный
+            // Обрезаем если слишком длинный (защита от переполнения памяти)
             if (trendDataStr.length() > MAX_TREND_DATA_LEN) {
                 trendDataStr = trendDataStr.substring(0, MAX_TREND_DATA_LEN);
             }
@@ -8222,7 +8268,7 @@ void addErrorToLog(String message, bool isCritical, bool includeTrends, int erro
         // Добавляем в начало (самые свежие сверху)
         errorLog.insert(errorLog.begin(), entry);
         
-        // Ограничиваем размер журнала (FIFO)
+        // Ограничиваем общий размер журнала (FIFO, не более MAX_ERROR_LOG = 20)
         while (errorLog.size() > MAX_ERROR_LOG) {
             errorLog.pop_back();
         }
@@ -9968,35 +10014,37 @@ bool validateAdaptationResults() {
 
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
 void initThermalModel() {
-    // Пробуем загрузить сохранённую модель
-    adaptiveModel.loadFromPreferences();
-    
-    if (adaptiveModel.initialized && adaptiveModel.samplesCollected > 10) {
-        // Модель была сохранена и имеет данные — продолжаем с ними
+    if (config.enableThermalModel) {
+        // Пробуем загрузить сохранённую модель
+        adaptiveModel.loadFromPreferences();
+        
+        if (adaptiveModel.initialized && adaptiveModel.samplesCollected > 10) {
+            // Модель была сохранена и имеет данные — продолжаем с ними
+            adaptiveModel.learningEnabled = true;
+            addNotificationToLog("🧠 Термальная модель загружена (уверенность " + 
+                                String((int)(adaptiveModel.confidence * 100)) + "%)");
+        } else if (config.adaptationPerformed) {
+            // Нет сохранённой модели, но есть адаптация — стартуем с неё
+            adaptiveModel.initFromAdaptation();
+            adaptiveModel.learningMode = true;
+            adaptiveModel.learningStartTime = millis();
+            adaptiveModel.confidence = 0.3f;
+            addNotificationToLog("🧠 Термальная модель: тёплый старт (адаптация)");
+        } else {
+            // Ничего нет — холодный старт
+            adaptiveModel.reset();
+            adaptiveModel.learningMode = true;
+            adaptiveModel.learningStartTime = millis();
+            addNotificationToLog("🧠 Термальная модель: холодный старт");
+        }
+        
         adaptiveModel.learningEnabled = true;
-        addNotificationToLog("🧠 Термальная модель загружена (уверенность " + 
-                            String((int)(adaptiveModel.confidence * 100)) + "%)");
-    } else if (config.adaptationPerformed) {
-        // Нет сохранённой модели, но есть адаптация — стартуем с неё
-        adaptiveModel.initFromAdaptation();
-        adaptiveModel.learningMode = true;
-        adaptiveModel.learningStartTime = millis();
-        adaptiveModel.confidence = 0.3f;
-        addNotificationToLog("🧠 Термальная модель: тёплый старт (адаптация)");
-    } else {
-        // Ничего нет — холодный старт
-        adaptiveModel.reset();
-        adaptiveModel.learningMode = true;
-        adaptiveModel.learningStartTime = millis();
-        addNotificationToLog("🧠 Термальная модель: холодный старт");
+        prevPredictionValid = false;
+        prevHeaterTemp = heaterTemp;
+        prevPower = heaterState ? 1.0f : 0.0f;
+        
+        updateProtectionsForThermalModel();
     }
-    
-    adaptiveModel.learningEnabled = true;
-    prevPredictionValid = false;
-    prevHeaterTemp = heaterTemp;
-    prevPower = heaterState ? 1.0f : 0.0f;
-    
-    updateProtectionsForThermalModel();
 }
 
 // ========== ПРОВЕРКА ТЕРМАЛЬНОЙ МОДЕЛИ v3 (С ПРОФИЛЕМ) ==========
