@@ -3,5 +3,5 @@
   "ota_url": "https://raw.githubusercontent.com/schreider/flook32/main/firmware/flook32/ota/0.1.0/flook32_ota.bin",
   "flash_url": "https://raw.githubusercontent.com/schreider/flook32/main/firmware/flook32/flash/0.1.0/flook32_flash.bin",
   "notes": "Первый публичный релиз\n- Двухконтурное управление нагревом\n- 7+ уровней защиты\n- Самообучаемая термальная модель\n- Автоадаптация",
-  "force": false
+  "force": true
 }
