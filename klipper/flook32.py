@@ -1184,6 +1184,37 @@ class FLOOK32Sensor:
         except:
             return None
     
+    def _async_run(self, work_fn, on_result=None):
+        """
+        Выполняет work_fn() в отдельном (не реакторном) потоке, чтобы не
+        блокировать основной поток Klippy сетевым I/O.
+
+        ВАЖНО: именно блокирующие вызовы _http_get_json/_http_post прямо
+        из обработчиков G-code (cmd_FLOOK_*) вызывали "Timer too close" /
+        MCU shutdown на слабых хостах — реактор Klipper не успевал вовремя
+        отправлять команды в MCU, пока ждал ответа по сети.
+
+        Если передан on_result, он будет вызван с результатом work_fn(),
+        но уже замаршален обратно в основной поток через
+        reactor.register_async_callback — поэтому внутри on_result можно
+        безопасно вызывать gcode.respond_info(...) и менять состояние self.
+        """
+        def _worker():
+            try:
+                result = work_fn()
+            except Exception as e:
+                logging.exception("FLOOK32 '{}': ошибка фонового запроса: {}".format(self.name, e))
+                result = None
+            if on_result:
+                try:
+                    self.reactor.register_async_callback(
+                        (lambda et, _r=result: on_result(_r)))
+                except Exception:
+                    # На случай старых версий Klipper без register_async_callback —
+                    # лучше показать результат чуть менее "безопасно", чем потерять его молча.
+                    on_result(result)
+        threading.Thread(target=_worker, daemon=True).start()
+
     def _send_config_to_esp(self):
         """
         Отправляет пользовательскую конфигурацию на FLOOK32.
@@ -1297,35 +1328,50 @@ class FLOOK32Sensor:
         was_first_connection = not self._connected_before
         
         with self.temp_lock:
-            # Парсим компактный JSON ответ (короткие ключи для экономии трафика)
+            # Парсим компактный JSON ответ (короткие ключи для экономии трафика).
+            # Каждое поле защищено отдельно: битый/неожиданный тип одного поля
+            # (например, если прошивка временно прислала мусор) не должен
+            # приводить к необработанному исключению и остановке всего потока.
             if 't' in data:
-                self.target_temp = float(data['t'])
+                try:
+                    self.target_temp = float(data['t'])
+                except (TypeError, ValueError):
+                    pass
             if 's' in data:
-                state = int(data['s'])
-                self.heater_state = (state & 1) != 0  # Бит 0 = нагреватель
-                self.fan_state = (state & 2) != 0     # Бит 1 = вентилятор
+                try:
+                    state = int(data['s'])
+                    self.heater_state = (state & 1) != 0  # Бит 0 = нагреватель
+                    self.fan_state = (state & 2) != 0     # Бит 1 = вентилятор
+                except (TypeError, ValueError):
+                    pass
             if 'fp' in data:
-                self.fan_duty = int(data['fp'])
+                try:
+                    self.fan_duty = int(data['fp'])
+                except (TypeError, ValueError):
+                    pass
             if 'a' in data:
                 try:
                     temp = float(data['a'])
                     if MIN_TEMP <= temp <= MAX_TEMP:
                         self.air_temp = temp
-                except:
+                except (TypeError, ValueError):
                     pass
             if 'h' in data:
                 try:
                     temp = float(data['h'])
                     if MIN_TEMP <= temp <= MAX_TEMP:
                         self.heater_temp = temp
-                except:
+                except (TypeError, ValueError):
                     pass
             if 'u' in data:
-                self.uptime = data['u']
+                self.uptime = data.get('u')
             if 'l' in data:
-                self.system_locked = data['l'] == 1
+                try:
+                    self.system_locked = data['l'] == 1
+                except (TypeError, ValueError):
+                    pass
             if 'e' in data:
-                self.error_count = data['e']
+                self.error_count = data.get('e')
             
             if 'id' in data:
                 self.device_id = self._normalize_id(data['id'])
@@ -1653,48 +1699,56 @@ class FLOOK32Sensor:
         last_error_check = 0
         
         while not self.stop_thread:
-            current_time = time.time()
-            
-            # Проверка ошибок FLOOK32
-            if current_time - last_error_check >= self.error_check_interval:
-                last_error_check = current_time
-                try:
-                    self._check_and_report_errors()
-                except:
-                    pass
-            
-            if self.flook_ip:
-                # Запуск WebSocket если доступен
-                if HAS_WEBSOCKET and not self.ws_connected and not self.ws_thread:
-                    self._start_websocket()
-                
-                # Отправка конфигурации при первом подключении
-                if (self._has_custom_config and not self.config_sent and 
-                    self.config_apply_attempts < self.max_config_attempts):
-                    with self._queue_lock:
-                        sending = self._config_sending
-                    if not sending:
-                        if self._send_config_to_esp():
-                            self.config_sent = True
-                            if not self._config_sent_message:
-                                self._send_notification("Конфигурация сохранена")
-                                self._config_sent_message = True
-                        else:
-                            self.config_apply_attempts += 1
-                
-                # HTTP опрос (если WebSocket не подключен)
-                if not self.ws_connected:
-                    self._update_from_api()
-                
-                # Передача температуры в Klipper
-                with self.temp_lock:
-                    temp = self.air_temp
-                
-                measured_time = self.reactor.monotonic()
-                print_time = mcu.estimated_print_time(measured_time)
-                if hasattr(self, '_callback'):
-                    self._callback(print_time, temp)
-            
+            try:
+                current_time = time.time()
+
+                # Проверка ошибок FLOOK32
+                if current_time - last_error_check >= self.error_check_interval:
+                    last_error_check = current_time
+                    try:
+                        self._check_and_report_errors()
+                    except Exception:
+                        logging.exception(
+                            "FLOOK32 '{}': ошибка проверки журнала ошибок".format(self.name))
+
+                if self.flook_ip:
+                    # Запуск WebSocket если доступен
+                    if HAS_WEBSOCKET and not self.ws_connected and not self.ws_thread:
+                        self._start_websocket()
+
+                    # Отправка конфигурации при первом подключении
+                    if (self._has_custom_config and not self.config_sent and
+                        self.config_apply_attempts < self.max_config_attempts):
+                        with self._queue_lock:
+                            sending = self._config_sending
+                        if not sending:
+                            if self._send_config_to_esp():
+                                self.config_sent = True
+                                if not self._config_sent_message:
+                                    self._send_notification("Конфигурация сохранена")
+                                    self._config_sent_message = True
+                            else:
+                                self.config_apply_attempts += 1
+
+                    # HTTP опрос (если WebSocket не подключен)
+                    if not self.ws_connected:
+                        self._update_from_api()
+
+                    # Передача температуры в Klipper
+                    with self.temp_lock:
+                        temp = self.air_temp
+
+                    measured_time = self.reactor.monotonic()
+                    print_time = mcu.estimated_print_time(measured_time)
+                    if hasattr(self, '_callback'):
+                        self._callback(print_time, temp)
+            except Exception:
+                # Любая непредвиденная ошибка (сеть, парсинг, mcu ещё не готов и т.п.)
+                # не должна насовсем убивать поток датчика — иначе температура
+                # перестанет обновляться до перезапуска Klipper.
+                logging.exception(
+                    "FLOOK32 '{}': необработанная ошибка в цикле опроса".format(self.name))
+
             time.sleep(self.report_interval)
     
     # =====================================================================
@@ -1734,34 +1788,51 @@ class FLOOK32Sensor:
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        result = self._http_post("/api/target?value={}".format(temp))
-        if result and ("OK" in result or "success" in result):
-            with self.temp_lock:
-                self.target_temp = temp
-            gcmd.respond_info("Целевая температура установлена на {}°C".format(temp))
-        else:
-            gcmd.respond_info("Не удалось установить температуру")
+
+        def _done(result):
+            if result and ("OK" in result or "success" in result):
+                with self.temp_lock:
+                    self.target_temp = temp
+                self.gcode.respond_info("Целевая температура установлена на {}°C".format(temp))
+            else:
+                self.gcode.respond_info("Не удалось установить температуру")
+
+        self._async_run(
+            lambda: self._http_post("/api/target?value={}".format(temp)), _done)
     
     def cmd_FLOOK_OFF(self, gcmd):
-        """FLOOK_OFF — аварийное выключение нагрева."""
+        """FLOOK_OFF — аварийное выключение нагрева (не блокирует реактор Klipper)."""
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        result = self._http_post("/api/heater-off")
-        if result and ("OK" in result or "success" in result):
-            gcmd.respond_info("Нагрев выключен")
-        else:
-            gcmd.respond_info("Не удалось выключить нагрев")
+
+        def _done(result):
+            if result and ("OK" in result or "success" in result):
+                self.gcode.respond_info("Нагрев выключен")
+            else:
+                self.gcode.respond_info("Не удалось выключить нагрев")
+
+        self._async_run(lambda: self._http_post("/api/heater-off"), _done)
     
     def cmd_FLOOK_DISCOVER(self, gcmd):
-        """FLOOK_DISCOVER — принудительный поиск устройств в сети."""
+        """FLOOK_DISCOVER — принудительный поиск устройств в сети (неблокирующий)."""
         gcmd.respond_info("Поиск устройств...")
-        time.sleep(5)
-        if self.flook_ip:
-            gcmd.respond_info("Устройство найдено: {}, ID: {}".format(
-                self.flook_ip, self.saved_device_id))
-        else:
-            gcmd.respond_info("Устройства не найдены")
+
+        def _wait_and_report():
+            # Раньше здесь был time.sleep(5) прямо в обработчике команды —
+            # это блокировало реактор Klipper на 5 секунд. Теперь ждём
+            # в фоновом потоке, а реактор в это время работает как обычно.
+            time.sleep(5)
+            return self.flook_ip, self.saved_device_id
+
+        def _done(result):
+            ip, device_id = result
+            if ip:
+                self.gcode.respond_info("Устройство найдено: {}, ID: {}".format(ip, device_id))
+            else:
+                self.gcode.respond_info("Устройства не найдены")
+
+        self._async_run(_wait_and_report, _done)
     
     def cmd_FLOOK_SET_IP(self, gcmd):
         """FLOOK_SET_IP IP=<адрес> — установить IP вручную."""
@@ -1787,36 +1858,46 @@ class FLOOK32Sensor:
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        result = self._http_post("/api/adapt/start?target={}".format(target))
-        if result and "started" in result.lower():
-            gcmd.respond_info("Адаптация запущена до {}°C".format(target))
-        else:
-            gcmd.respond_info("Не удалось запустить адаптацию")
+
+        def _done(result):
+            if result and "started" in result.lower():
+                self.gcode.respond_info("Адаптация запущена до {}°C".format(target))
+            else:
+                self.gcode.respond_info("Не удалось запустить адаптацию")
+
+        self._async_run(
+            lambda: self._http_post("/api/adapt/start?target={}".format(target)), _done)
     
     def cmd_FLOOK_ADAPT_ABORT(self, gcmd):
         """FLOOK_ADAPT_ABORT — прервать адаптацию."""
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        result = self._http_post("/api/adapt/abort")
-        if result:
-            gcmd.respond_info("Адаптация прервана")
-        else:
-            gcmd.respond_info("Не удалось прервать адаптацию")
+
+        def _done(result):
+            if result:
+                self.gcode.respond_info("Адаптация прервана")
+            else:
+                self.gcode.respond_info("Не удалось прервать адаптацию")
+
+        self._async_run(lambda: self._http_post("/api/adapt/abort"), _done)
     
     def cmd_FLOOK_ADAPT_STATUS(self, gcmd):
         """FLOOK_ADAPT_STATUS — статус адаптации."""
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        data = self._http_get_json("/api/adapt/status")
-        if data:
-            status = "Адаптация: {}\n".format('ВКЛ' if data.get('inProgress') else 'ВЫКЛ')
-            status += "Прогресс: {}%\n".format(data.get('progress', 0))
-            status += "Сообщение: {}".format(data.get('message', ''))
-            gcmd.respond_info(status)
-        else:
-            gcmd.respond_info("Не удалось получить статус")
+
+        def _done(data):
+            if data:
+                status = "Адаптация: {}\n".format('ВКЛ' if data.get('inProgress') else 'ВЫКЛ')
+                status += "Прогресс: {}%\n".format(data.get('progress', 0))
+                status += "Сообщение: {}".format(data.get('message', ''))
+                self.gcode.respond_info(status)
+            else:
+                self.gcode.respond_info("Не удалось получить статус")
+
+        self._async_run(lambda: self._http_get_json("/api/adapt/status"), _done)
     
     def cmd_FLOOK_UNLOCK(self, gcmd):
         """FLOOK_UNLOCK [PASSWORD=<пароль>] — разблокировать настройки."""
@@ -1824,86 +1905,107 @@ class FLOOK32Sensor:
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        result = self._http_post("/api/unlock-settings?password={}".format(password))
-        if result and "unlocked" in result.lower():
-            gcmd.respond_info("Настройки разблокированы")
-        else:
-            gcmd.respond_info("Не удалось разблокировать")
+
+        def _done(result):
+            if result and "unlocked" in result.lower():
+                self.gcode.respond_info("Настройки разблокированы")
+            else:
+                self.gcode.respond_info("Не удалось разблокировать")
+
+        self._async_run(
+            lambda: self._http_post("/api/unlock-settings?password={}".format(password)), _done)
     
     def cmd_FLOOK_LOCK(self, gcmd):
         """FLOOK_LOCK — заблокировать настройки."""
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        result = self._http_post("/api/lock-settings")
-        if result:
-            gcmd.respond_info("Настройки заблокированы")
-        else:
-            gcmd.respond_info("Не удалось заблокировать")
+
+        def _done(result):
+            if result:
+                self.gcode.respond_info("Настройки заблокированы")
+            else:
+                self.gcode.respond_info("Не удалось заблокировать")
+
+        self._async_run(lambda: self._http_post("/api/lock-settings"), _done)
     
     def cmd_FLOOK_REBOOT(self, gcmd):
-        """FLOOK_REBOOT — перезагрузить FLOOK32."""
+        """FLOOK_REBOOT — перезагрузить FLOOK32 (не блокирует реактор)."""
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
         gcmd.respond_info("Перезагрузка FLOOK32...")
-        self._http_post("/api/reboot")
-        if HAS_WEBSOCKET:
-            self._stop_websocket()
-        self.flook_ip = None
-        self.discovery_complete = False
-        self.config_sent = False
-        self._config_sent_message = False
-        self._http_errors = 0
-        gcmd.respond_info("Команда отправлена")
+
+        def _work():
+            self._http_post("/api/reboot")
+            return True
+
+        def _done(_result):
+            if HAS_WEBSOCKET:
+                self._stop_websocket()
+            self.flook_ip = None
+            self.discovery_complete = False
+            self.config_sent = False
+            self._config_sent_message = False
+            self._http_errors = 0
+            self.gcode.respond_info("Команда отправлена")
+
+        self._async_run(_work, _done)
     
     def cmd_FLOOK_ERRORS(self, gcmd):
         """FLOOK_ERRORS — показать журнал ошибок (последние 10 записей)."""
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        data = self._http_get_json("/api/error-log")
-        if not data:
-            gcmd.respond_info("Не удалось получить журнал ошибок")
-            return
-        errors_list = data if isinstance(data, list) else data.get('errorLog', [])
-        if not errors_list:
-            gcmd.respond_info("Журнал ошибок пуст")
-            return
-        gcmd.respond_info("=== ЖУРНАЛ ОШИБОК ===")
-        for err in errors_list[-10:]:
-            ts = err.get('ts', 0)
-            hours = ts // 3600
-            minutes = (ts % 3600) // 60
-            seconds = ts % 60
-            msg = err.get('msg', err.get('message', ''))
-            sev = err.get('sev', err.get('severity', 'info'))
-            icon = "🔥" if sev == "critical" else "⚠️" if sev == "warning" else "ℹ️"
-            gcmd.respond_info("{} [{:02d}:{:02d}:{:02d}] {}".format(icon, hours, minutes, seconds, msg))
+
+        def _done(data):
+            if not data:
+                self.gcode.respond_info("Не удалось получить журнал ошибок")
+                return
+            errors_list = data if isinstance(data, list) else data.get('errorLog', [])
+            if not errors_list:
+                self.gcode.respond_info("Журнал ошибок пуст")
+                return
+            self.gcode.respond_info("=== ЖУРНАЛ ОШИБОК ===")
+            for err in errors_list[-10:]:
+                ts = err.get('ts', 0)
+                hours = ts // 3600
+                minutes = (ts % 3600) // 60
+                seconds = ts % 60
+                msg = err.get('msg', err.get('message', ''))
+                sev = err.get('sev', err.get('severity', 'info'))
+                icon = "🔥" if sev == "critical" else "⚠️" if sev == "warning" else "ℹ️"
+                self.gcode.respond_info("{} [{:02d}:{:02d}:{:02d}] {}".format(
+                    icon, hours, minutes, seconds, msg))
+
+        self._async_run(lambda: self._http_get_json("/api/error-log"), _done)
     
     def cmd_FLOOK_CONFIG_GET(self, gcmd):
         """FLOOK_CONFIG_GET — показать текущую конфигурацию устройства."""
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        data = self._http_get_json("/api/config")
-        if not data:
-            gcmd.respond_info("Не удалось получить конфигурацию")
-            return
-        status = "⚙️ КОНФИГУРАЦИЯ FLOOK32:\n"
-        status += "  maxHeaterTemp: {}°C\n".format(data.get('mt', 0))
-        status += "  criticalTemp: {}°C\n".format(data.get('ct', 0))
-        status += "  maxAirTemp: {}°C\n".format(data.get('ma', 0))
-        status += "  hysteresis: {}°C\n".format(data.get('hy', 0))
-        status += "  heaterHysteresis: {}°C\n".format(data.get('hh', 0))
-        status += "  fanOnTemp: {}°C\n".format(data.get('fT', 0))
-        status += "  maxFanDuty: {}\n".format(data.get('mFD', 1023))
-        status += "  invertHeaterSignal: {}\n".format('Да' if data.get('iH') else 'Нет')
-        status += "  invertFanSignal: {}\n".format('Да' if data.get('iF') else 'Нет')
-        status += "  autoShutdownEnabled: {}\n".format('Да' if data.get('aSd') else 'Нет')
-        status += "  autoShutdownMinutes: {}\n".format(data.get('aSm', 30))
-        status += "  adaptationPerformed: {}\n".format('Да' if data.get('aPd') else 'Нет')
-        gcmd.respond_info(status)
+
+        def _done(data):
+            if not data:
+                self.gcode.respond_info("Не удалось получить конфигурацию")
+                return
+            status = "⚙️ КОНФИГУРАЦИЯ FLOOK32:\n"
+            status += "  maxHeaterTemp: {}°C\n".format(data.get('mt', 0))
+            status += "  criticalTemp: {}°C\n".format(data.get('ct', 0))
+            status += "  maxAirTemp: {}°C\n".format(data.get('ma', 0))
+            status += "  hysteresis: {}°C\n".format(data.get('hy', 0))
+            status += "  heaterHysteresis: {}°C\n".format(data.get('hh', 0))
+            status += "  fanOnTemp: {}°C\n".format(data.get('fT', 0))
+            status += "  maxFanDuty: {}\n".format(data.get('mFD', 1023))
+            status += "  invertHeaterSignal: {}\n".format('Да' if data.get('iH') else 'Нет')
+            status += "  invertFanSignal: {}\n".format('Да' if data.get('iF') else 'Нет')
+            status += "  autoShutdownEnabled: {}\n".format('Да' if data.get('aSd') else 'Нет')
+            status += "  autoShutdownMinutes: {}\n".format(data.get('aSm', 30))
+            status += "  adaptationPerformed: {}\n".format('Да' if data.get('aPd') else 'Нет')
+            self.gcode.respond_info(status)
+
+        self._async_run(lambda: self._http_get_json("/api/config"), _done)
     
     def cmd_FLOOK_AUTO_SHUTDOWN(self, gcmd):
         """FLOOK_AUTO_SHUTDOWN [ENABLE=1] [MINUTES=30] — настройка автоотключения."""
@@ -1918,11 +2020,16 @@ class FLOOK32Sensor:
         if minutes is not None:
             params.append("minutes={}".format(minutes))
         if params:
-            result = self._http_post("/api/moonraker-shutdown?{}".format('&'.join(params)))
-            if result and ("OK" in result or "success" in result):
-                gcmd.respond_info("Автоотключение обновлено")
-            else:
-                gcmd.respond_info("Не удалось обновить")
+            query = '&'.join(params)
+
+            def _done(result):
+                if result and ("OK" in result or "success" in result):
+                    self.gcode.respond_info("Автоотключение обновлено")
+                else:
+                    self.gcode.respond_info("Не удалось обновить")
+
+            self._async_run(
+                lambda: self._http_post("/api/moonraker-shutdown?{}".format(query)), _done)
         else:
             gcmd.respond_info("Использование: FLOOK_AUTO_SHUTDOWN ENABLE=1 MINUTES=30")
     
@@ -1931,14 +2038,17 @@ class FLOOK32Sensor:
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        data = self._http_get_json("/api/config")
-        if data:
-            enabled = data.get('aSd', False)
-            minutes = data.get('aSm', 30)
-            gcmd.respond_info("Автоотключение: {} ({} мин)".format(
-                'ВКЛ' if enabled else 'ВЫКЛ', minutes))
-        else:
-            gcmd.respond_info("Не удалось получить статус")
+
+        def _done(data):
+            if data:
+                enabled = data.get('aSd', False)
+                minutes = data.get('aSm', 30)
+                self.gcode.respond_info("Автоотключение: {} ({} мин)".format(
+                    'ВКЛ' if enabled else 'ВЫКЛ', minutes))
+            else:
+                self.gcode.respond_info("Не удалось получить статус")
+
+        self._async_run(lambda: self._http_get_json("/api/config"), _done)
     
     def cmd_FLOOK_RESET_ID(self, gcmd):
         """
@@ -1972,11 +2082,15 @@ class FLOOK32Sensor:
         if not self.flook_ip:
             gcmd.respond_info("Нет подключенного устройства")
             return
-        result = self._http_post("/api/calibrate-max6675?temp={}".format(temp))
-        if result and ("OK" in result or "success" in result):
-            gcmd.respond_info("Калибровка выполнена с эталоном {}°C".format(temp))
-        else:
-            gcmd.respond_info("Не удалось выполнить калибровку")
+
+        def _done(result):
+            if result and ("OK" in result or "success" in result):
+                self.gcode.respond_info("Калибровка выполнена с эталоном {}°C".format(temp))
+            else:
+                self.gcode.respond_info("Не удалось выполнить калибровку")
+
+        self._async_run(
+            lambda: self._http_post("/api/calibrate-max6675?temp={}".format(temp)), _done)
     
     # =====================================================================
     # ИНТЕРФЕЙС ДЛЯ KLIPPER
